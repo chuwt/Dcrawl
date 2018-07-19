@@ -90,19 +90,21 @@ class Consumer:
             if method == 'GET':
                 async with session.get(url, data=json.dumps(data), headers=headers, timeout=5000) as resp:
                     t = await resp.text()
-                    self.result(t)
+                    Consumer.result(t)
                     # print(t)
             elif method == 'POST':
                 async with session.post(url, data=json.dumps(data), headers=headers, timeout=5000) as resp:
                     t = await resp.text()
-                    self.result(t)
+                    Consumer.result(t)
                     # print(t)
 
-    def handle(self, func):
-        self.result = func
+    @staticmethod
+    def handle(func):
+        Consumer.result = func
         return
 
-    def result(self, resp):
+    @staticmethod
+    def result(resp):
         print(resp)
 
     async def run(self):
