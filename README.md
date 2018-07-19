@@ -17,3 +17,13 @@
 
 # consumer_demo
 
+    from consumer import Consumer
+    cons = Consumer()
+    
+    # 数据处理方法 todo 可以根据不同的name写不同的handle
+    @Consumer.handle
+    def result(resp):
+        print('test')
+        print(resp)
+        
+    cons.loop_task()
