@@ -3,5 +3,17 @@
 
 # producer_demo
 
+    from producer import Producer
+    p = Producer()
+    data = {
+            "name":        'baidu',                     
+            "url":         "https://baidu.com",     
+            "headers":     {"Content-Type": "application/json"},                         
+            "data":        {},
+            "method":      "get"                       
+        }
+    p.add_task(data)
+    p.run()
+
 # consumer_demo
 
