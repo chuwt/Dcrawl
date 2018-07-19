@@ -1,0 +1,6 @@
+{
+    "broker_uri": "@127.0.0.1",
+    "consumer_amount": 1,
+    "log_path": "error.log",
+    "default_time_delay": 1       
+}
