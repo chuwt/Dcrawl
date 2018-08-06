@@ -3,7 +3,8 @@
 
 # pip
 
-pip install chuwt-Dcrawl
+    # todo pypi配置问题，暂时无法使用，后面修复
+    # pip install chuwt-Dcrawl
 
 # producer_demo
 
