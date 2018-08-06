@@ -82,7 +82,7 @@ class Producer:
         任务分配的key: "{hostname}.task"
         """
         print('init distribute task ...')
-        hosts = self.cache.lrange('hosts', 0, 999) # 获取所有consumer_hostname
+        hosts = self.cache.lrange('hosts', 0, 999)  # 获取所有consumer_hostname
         # todo 给每个host分配任务
         task_number = 0
         for data in self.queue:
