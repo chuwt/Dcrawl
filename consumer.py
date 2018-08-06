@@ -13,14 +13,14 @@ import signal
 
 class Consumer:
     def __init__(self):
+        self.CONFIG = self._get_config()
+        self.cache = self._get_cache()
+        self.HOSTNAME = self._get_hostname()
         self.init()
         self.RUNNING_SIG = True
         self.log_cache = ''
 
     def init(self):
-        self.CONFIG = self._get_config()
-        self.cache = self._get_cache()
-        self.HOSTNAME = self._get_hostname()
         self._set_host()
         self._set_log()
         self._set_signal()
@@ -86,7 +86,7 @@ class Consumer:
 
 
     async def request_task(self, url, method, headers, data):
-        async with aiohttp.ClientSession() as session:
+        async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(verify_ssl=False)) as session:
             if method == 'GET':
                 async with session.get(url, data=json.dumps(data), headers=headers, timeout=5000) as resp:
                     t = await resp.text()
@@ -110,7 +110,6 @@ class Consumer:
     async def run(self):
         task = [asyncio.ensure_future(self.worker()) for i in range(10)]
         await asyncio.wait(task)
-
 
     def loop_task(self):
         while self.RUNNING_SIG:
