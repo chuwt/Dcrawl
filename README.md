@@ -10,13 +10,14 @@
 
     from producer import Producer
     p = Producer()
+    // 留意for循环插入时data不要放到for外面，造成data引用问题
     data = {
             "name":        'baidu',                     
             "url":         "https://baidu.com",     
             "headers":     {"Content-Type": "application/json"},                         
             "data":        {},
             "method":      "get"                       
-        }
+    }
     p.add_task(data)
     p.run()
 
