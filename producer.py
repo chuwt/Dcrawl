@@ -78,6 +78,7 @@ class Producer:
                 "data":        {}                           # 请求体
                 "status":      "pending"                    # 任务状态
                 "method":      "get"                        # 方法
+                "times":        1                           # 运行次数
             }
         任务分配的key: "{hostname}.task"
         """

@@ -9,6 +9,7 @@ import socket
 import asyncio
 import aiohttp
 import signal
+import aredis
 
 
 class Consumer:
@@ -26,31 +27,32 @@ class Consumer:
         self._set_signal()
 
     def _set_log(self):
-        logging.basicConfig(filename=self.CONFIG['log_path'], level=logging.ERROR)
+        logging.basicConfig(filename=self.CONFIG['log_path'], level=logging.INFO)
 
     def _get_config(self):
         with open('./config.json', 'r') as f:
             config = json.load(f)
-            return config    
+            return config
 
     def _get_cache(self):
         pwd, host = self.CONFIG['broker_uri'].split('@')
         if pwd:
-            cache_pool = redis.ConnectionPool(host=host, password=pwd, decode_responses=True)
+            cache_pool = aredis.ConnectionPool(host=host, password=pwd, decode_responses=True)
         else:
-            cache_pool = redis.ConnectionPool(host=host, decode_responses=True)
-        cache = redis.Redis(connection_pool=cache_pool)
+            cache_pool = aredis.ConnectionPool(host=host, decode_responses=True)
+        cache = aredis.StrictRedis(connection_pool=cache_pool)
+        # cache = redis.Redis(connection_pool=cache_pool)
         return cache
 
     def _get_hostname(self):
         hostname = socket.gethostname()
         return hostname
 
-    def _set_host(self):
-        hosts = self.cache.lrange('hosts', 0, 100)
+    async def _set_host(self):
+        hosts = await self.cache.lrange('hosts', 0, 100)
         print(hosts)
         if self.HOSTNAME not in hosts:
-            self.cache.lpush('hosts', self.HOSTNAME)
+            await self.cache.lpush('hosts', self.HOSTNAME)
 
     def _put_running_sig(self, sig, frame):
         self.RUNNING_SIG = False
@@ -65,37 +67,48 @@ class Consumer:
         signal.signal(signal.SIGTERM, self._put_running_sig)
 
     async def worker(self):
+        """
+        1. 检查Running_sig
+            1.1 获取顶部信息，如果获取不到则阻塞
+                1.1.1 检查锁的状态，可用则继续
+        todo: 添加次数
+        :return:
+        """
         tasks_key = "{}.task".format(self.HOSTNAME)
         while self.RUNNING_SIG:
-            cache_data = self.cache.blpop(tasks_key, 5)[1]    # 获取顶部纪录
+            cache_data = await self.cache.blpop(tasks_key, 5)
             if cache_data:
+                cache_data = cache_data[1]  # 获取顶部纪录
                 data = json.loads(cache_data)
-                name = data['name']
+                name = data.get('name', '')
+                # times = int(data.get('times', 1)) - 1
+                data['times'] = int(data.get('times', 1)) - 1
+                if data['times'] < 0:
+                    continue
                 lock_key = "{}.{}.lock".format(self.HOSTNAME, name)
-                self.cache.rpush(tasks_key, cache_data)    # 将纪录插回底部
+                await self.cache.rpush(tasks_key, json.dumps(data))    # 将纪录插回底部
                 # 检查时间锁的状态
-                if not self.cache.get(lock_key):
+                if not await self.cache.get(lock_key):
                     url = data['url']
                     headers = data['headers']
                     body_data = data['data']
                     method = data['method'].upper()
                     # 重新设置时间锁的状态
-                    self.cache.set(lock_key, 1, int(self.cache.get(name) or 1))     
-                    print(f"{url} done")
+                    await self.cache.set(lock_key, 1, int(await self.cache.get(name) or 1))
+                    logging.info(f"{url} done")
                     await self.request_task(url, method, headers, body_data)
-
 
     async def request_task(self, url, method, headers, data):
         async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(verify_ssl=False)) as session:
             if method == 'GET':
-                async with session.get(url, data=json.dumps(data), headers=headers, timeout=5000) as resp:
+                async with session.get(url, headers=headers, timeout=5000) as resp:
                     t = await resp.text()
-                    Consumer.result(t)
+                    await Consumer.result(t)
                     # print(t)
             elif method == 'POST':
                 async with session.post(url, data=json.dumps(data), headers=headers, timeout=5000) as resp:
                     t = await resp.text()
-                    Consumer.result(t)
+                    await Consumer.result(t)
                     # print(t)
 
     @staticmethod
@@ -104,7 +117,8 @@ class Consumer:
         return
 
     @staticmethod
-    def result(resp):
+    async def result(resp):
+        # await asyncio.sleep(0.1)
         print(resp)
 
     async def run(self):
@@ -119,6 +133,9 @@ class Consumer:
                 loop.run_until_complete(asyncio.ensure_future(self.run()))
             except Exception as e:
                 if self.log_cache != e:
-                    logging.error(e)    
+                    logging.error(e)
                 self.log_cache = e
                 self.RUNNING_SIG = False
+
+    def loop_stop(self):
+        self.RUNNING_SIG = False
