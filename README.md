@@ -1,6 +1,21 @@
 # Dcrawl(这次不装逼，用中文)
 一个分布式异步爬虫，采用生产Producer和消费Consumer模式
 
+# Updates
+    
+    - 0.1
+        - 添加producer_demo中循环添加data的提示
+        - 修复consumer的get请求带有空data会出错的bug
+        - 将consumer原本控制台输出放入log作为info
+        - 将consumer的同步redis改为异步aredis，set_host 会报warnning，后期改进
+        - 任务添加times字段，表示执行次数
+
+# TODO List
+    
+    - websocket的支持（待定）
+    - 修复aredsi造成的warnning
+    - pypi修复
+
 # pip
 
     # todo pypi配置问题，暂时无法使用，后面修复
