@@ -3,11 +3,11 @@
 
 # Updates
     
-    - 0.1.1
+    - v0.1.1
         - 修复aredsi造成的warnning
         - 修复consumer 处理请求次数的bug
     
-    - 0.1
+    - v0.1
         - 添加producer_demo中循环添加data的提示
         - 修复consumer的get请求带有空data会出错的bug
         - 将consumer原本控制台输出放入log作为info
