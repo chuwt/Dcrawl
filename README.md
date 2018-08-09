@@ -3,6 +3,10 @@
 
 # Updates
     
+    - 0.1.1
+        - 修复aredsi造成的warnning
+        - 修复consumer 处理请求次数的bug
+    
     - 0.1
         - 添加producer_demo中循环添加data的提示
         - 修复consumer的get请求带有空data会出错的bug
@@ -12,8 +16,8 @@
 
 # TODO List
     
+    - 添加consumer result里带有本次请求的name，用于分类
     - websocket的支持（待定）
-    - 修复aredsi造成的warnning
     - pypi修复
 
 # pip

@@ -22,7 +22,7 @@ class Consumer:
         self.log_cache = ''
 
     def init(self):
-        self._set_host()
+        # self._set_host()
         self._set_log()
         self._set_signal()
 
@@ -71,7 +71,6 @@ class Consumer:
         1. 检查Running_sig
             1.1 获取顶部信息，如果获取不到则阻塞
                 1.1.1 检查锁的状态，可用则继续
-        todo: 添加次数
         :return:
         """
         tasks_key = "{}.task".format(self.HOSTNAME)
@@ -82,9 +81,12 @@ class Consumer:
                 data = json.loads(cache_data)
                 name = data.get('name', '')
                 # times = int(data.get('times', 1)) - 1
-                data['times'] = int(data.get('times', 1)) - 1
-                if data['times'] < 0:
-                    continue
+                times = data.get('times', None)
+                # 如果设置了次数
+                if times:
+                    data['times'] = int(times) - 1
+                    if data['times'] < 0:
+                        continue
                 lock_key = "{}.{}.lock".format(self.HOSTNAME, name)
                 await self.cache.rpush(tasks_key, json.dumps(data))    # 将纪录插回底部
                 # 检查时间锁的状态
@@ -122,7 +124,8 @@ class Consumer:
         print(resp)
 
     async def run(self):
-        task = [asyncio.ensure_future(self.worker()) for i in range(10)]
+        await self._set_host()
+        task = [asyncio.ensure_future(self.worker()) for _ in range(10)]
         await asyncio.wait(task)
 
     def loop_task(self):

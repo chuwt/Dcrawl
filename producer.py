@@ -78,7 +78,6 @@ class Producer:
                 "data":        {}                           # 请求体
                 "status":      "pending"                    # 任务状态
                 "method":      "get"                        # 方法
-                "times":        1                           # 运行次数
             }
         任务分配的key: "{hostname}.task"
         """
@@ -89,7 +88,7 @@ class Producer:
         for data in self.queue:
             host_index = task_number % self.MAX_HOST
             task_name = "{}.task".format(hosts[host_index])
-            task_data = json.dumps(data)
+            task_data = data
             self.cache.lpush(task_name, task_data)
             task_number += 1
         print('task done')
