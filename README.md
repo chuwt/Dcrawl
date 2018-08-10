@@ -14,9 +14,15 @@
         - 将consumer的同步redis改为异步aredis，set_host 会报warnning，后期改进
         - 任务添加times字段，表示执行次数
 
+# bug list
+    
+    - 异步redis时竞争锁状态时的bug
+
 # TODO List
     
+    - 添加log格式化
     - 添加consumer result里带有本次请求的name，用于分类
+    - 添加proxy支持
     - websocket的支持（待定）
     - pypi修复
 
