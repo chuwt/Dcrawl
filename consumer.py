@@ -14,7 +14,7 @@ import aredis
 
 def init_logo():
     print(
-        """      %@@(                              @@ 
+        """              %@@(                              @@ 
                &@@@#                          @@@@ 
            @@@(  /@@@%                      @@@@@@ 
             %@@@#   @@@@                  @@@@@@@* 
@@ -42,6 +42,9 @@ init_logo()
 
 
 class Consumer:
+    """
+    初始化配置，缓存，log等
+    """
     def __init__(self):
         self.CONFIG = self._get_config()
         self.cache = self._get_cache()
@@ -49,6 +52,7 @@ class Consumer:
         self.init()
         self.RUNNING_SIG = True
         self.log_cache = ''
+        self.lock_setter = False
 
     def init(self):
         # self._set_host()
@@ -95,6 +99,10 @@ class Consumer:
         # kill
         signal.signal(signal.SIGTERM, self._put_running_sig)
 
+    async def sync_task(self, key, delay):
+        await asyncio.sleep(delay)
+        await self.cache.rpush(key, 1)
+
     async def worker(self):
         """
         1. 检查Running_sig
@@ -104,7 +112,7 @@ class Consumer:
         """
         tasks_key = "{}.task".format(self.HOSTNAME)
         while self.RUNNING_SIG:
-            cache_data = await self.cache.blpop(tasks_key, 5)
+            cache_data = await self.cache.blpop(tasks_key, timeout=10)
             if cache_data:
                 cache_data = cache_data[1]  # 获取顶部纪录
                 data = json.loads(cache_data)
@@ -117,15 +125,22 @@ class Consumer:
                     if data['times'] < 0:
                         continue
                 lock_key = "{}.{}.lock".format(self.HOSTNAME, name)
+                # 设置锁
+                if not self.lock_setter:
+                    if not await self.cache.exists(lock_key):
+                        await self.cache.rpush(lock_key, 1)
+                    self.lock_setter = True
                 await self.cache.rpush(tasks_key, json.dumps(data))    # 将纪录插回底部
-                # 检查时间锁的状态
-                if not await self.cache.get(lock_key):
+                # 检查是否有锁，没有则进入下一个任务
+                lock = await self.cache.blpop(lock_key, timeout=1)
+                if lock:
                     url = data['url']
                     headers = data['headers']
                     body_data = data['data']
                     method = data['method'].upper()
                     # 重新设置时间锁的状态
-                    await self.cache.set(lock_key, 1, int(await self.cache.get(name) or 1))
+                    await self.sync_task(lock_key, 5)
+                    # await self.cache.rpush(lock_key, 1)
                     logging.info(f"{url} done")
                     await self.request_task(url, method, headers, body_data)
 
