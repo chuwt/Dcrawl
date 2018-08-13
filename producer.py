@@ -87,11 +87,12 @@ class Producer:
         hosts = self.cache.lrange('hosts', 0, 999)  # 获取所有consumer_hostname
         # todo 给每个host分配任务
         task_number = 0
-        for data in self.queue:
+        for task in self.queue:
             host_index = task_number % self.MAX_HOST
             task_name = "{}.task".format(hosts[host_index])
-            task_data = data
-            self.cache.lpush(task_name, task_data)
+            if not task.group:
+                task.group = task.name
+            self.cache.lpush(task_name, task())
             task_number += 1
         print('task done')
 

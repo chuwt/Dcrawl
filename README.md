@@ -2,6 +2,12 @@
 一个分布式异步爬虫，采用生产Producer和消费Consumer模式
 
 # Updates
+
+    - v0.1.2
+        - 添加请求时group参数，用于将task分组，同一组享有共同的timeout
+        - 添加tasker模块，用于构造发送的请求
+        - 添加conumser result的返回name
+        - 修复aredis请求资源竞争问题
     
     - v0.1.1
         - 修复aredsi造成的warnning
@@ -16,7 +22,7 @@
 
 # bug list
     
-    - 异步redis时竞争锁状态时的bug
+    - 任务运行时会出现一个task一直竞争到资源，导致其他task请求次数太少，考虑加一个权值
 
 # TODO List
     
@@ -34,6 +40,7 @@
 # producer_demo
 
     from producer import Producer
+    from tasker import Tasker
     p = Producer()
     // 留意for循环插入时data不要放到for外面，造成data引用问题
     data = {
@@ -43,7 +50,12 @@
             "data":        {},
             "method":      "get"                       
     }
-    p.add_task(data)
+    task = Tasker()
+    task.name = 'baidu'
+    task.url = 'https://baidu.com'
+    task.headers = {"Content-Type": "application/json"}
+    task.method = "get"
+    p.add_task(task)
     p.run()
 
 # consumer_demo
@@ -53,7 +65,7 @@
     
     # 数据处理方法 todo 可以根据不同的name写不同的handle
     @Consumer.handle
-    def result(resp):
+    def result(resp, name):
         print('test')
         print(resp)
         

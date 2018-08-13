@@ -116,7 +116,7 @@ class Consumer:
             if cache_data:
                 cache_data = cache_data[1]  # 获取顶部纪录
                 data = json.loads(cache_data)
-                name = data.get('name', '')
+                group_name = data.get('group')
                 # times = int(data.get('times', 1)) - 1
                 times = data.get('times', None)
                 # 如果设置了次数
@@ -124,37 +124,41 @@ class Consumer:
                     data['times'] = int(times) - 1
                     if data['times'] < 0:
                         continue
-                lock_key = "{}.{}.lock".format(self.HOSTNAME, name)
+                lock_key = "{}.{}.lock".format(self.HOSTNAME, group_name)
                 # 设置锁
                 if not self.lock_setter:
+                    # 上锁，防止 lock_setter 多次判断
+                    self.lock_setter = True
                     if not await self.cache.exists(lock_key):
                         await self.cache.rpush(lock_key, 1)
-                    self.lock_setter = True
                 await self.cache.rpush(tasks_key, json.dumps(data))    # 将纪录插回底部
                 # 检查是否有锁，没有则进入下一个任务
-                lock = await self.cache.blpop(lock_key, timeout=1)
-                if lock:
-                    url = data['url']
-                    headers = data['headers']
-                    body_data = data['data']
-                    method = data['method'].upper()
-                    # 重新设置时间锁的状态
-                    await self.sync_task(lock_key, 5)
-                    # await self.cache.rpush(lock_key, 1)
-                    logging.info(f"{url} done")
-                    await self.request_task(url, method, headers, body_data)
+                key_exists = await self.cache.exists(lock_key)
+                if key_exists:
+                    lock = await self.cache.blpop(lock_key, timeout=1)
+                    if lock:
+                        url = data['url']
+                        name = data['name']
+                        headers = data['headers']
+                        body_data = data['data']
+                        method = data['method'].upper()
+                        # 重新设置时间锁的状态
+                        await self.sync_task(lock_key, int(await self.cache.get(group_name) or 5))
+                        # await self.cache.rpush(lock_key, 1)
+                        logging.info(f"{url} done")
+                        await self.request_task(url, method, headers, body_data, name)
 
-    async def request_task(self, url, method, headers, data):
+    async def request_task(self, url, method, headers, data, name):
         async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(verify_ssl=False)) as session:
             if method == 'GET':
                 async with session.get(url, headers=headers, timeout=5000) as resp:
                     t = await resp.text()
-                    await Consumer.result(t)
+                    await Consumer.result(t, name)
                     # print(t)
             elif method == 'POST':
                 async with session.post(url, data=json.dumps(data), headers=headers, timeout=5000) as resp:
                     t = await resp.text()
-                    await Consumer.result(t)
+                    await Consumer.result(t, name)
                     # print(t)
 
     @staticmethod
@@ -163,7 +167,7 @@ class Consumer:
         return
 
     @staticmethod
-    async def result(resp):
+    async def result(resp, name=None):
         # await asyncio.sleep(0.1)
         print(resp)
 
