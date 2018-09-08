@@ -3,6 +3,13 @@
 
 # Updates
 
+    - v0.2
+        - 重构consumer：
+            1. 改变原有的初始化方式，将原来的redis异步读取，改为一次性读取到内存中
+            2. 修改原来的worker方法，添加未完成队列和完成队列来进行任务跟踪，这样每个task都会被
+                执行一遍，不存在一个task被执行多次，而另一个task（同一group中）被执行多次
+            3. 添加了格式化log
+
     - v0.1.2
         - 添加请求时group参数，用于将task分组，同一组享有共同的timeout
         - 添加tasker模块，用于构造发送的请求
@@ -22,14 +29,13 @@
 
 # bug list
     
-    - 任务运行时会出现一个task一直竞争到资源，导致其他task请求次数太少，考虑加一个权值
+    
 
 # TODO List
     
-    - 添加log格式化
-    - 添加consumer result里带有本次请求的name，用于分类
+    - 优化woker， 添加log输出
+    - 添加websocket的支持（已完成初步）
     - 添加proxy支持
-    - websocket的支持（待定）
     - pypi修复
 
 # pip
@@ -42,14 +48,6 @@
     from producer import Producer
     from tasker import Tasker
     p = Producer()
-    // 留意for循环插入时data不要放到for外面，造成data引用问题
-    data = {
-            "name":        'baidu',                     
-            "url":         "https://baidu.com",     
-            "headers":     {"Content-Type": "application/json"},                         
-            "data":        {},
-            "method":      "get"                       
-    }
     task = Tasker()
     task.name = 'baidu'
     task.url = 'https://baidu.com'
