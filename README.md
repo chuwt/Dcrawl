@@ -3,6 +3,10 @@
 
 # Updates
 
+    - v0.2.1
+        - 修复了初始化tasks时关闭无法跳出循环的bug
+        - 修复asyncio headers 的传入bug
+
     - v0.2
         - 重构consumer：
             1. 改变原有的初始化方式，将原来的redis异步读取，改为一次性读取到内存中
@@ -29,6 +33,7 @@
 
 # bug list
     
+    - 新的任务到来时的重新载入任务
     
 
 # TODO List

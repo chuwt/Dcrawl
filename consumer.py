@@ -119,7 +119,7 @@ class Consumer:
     def init_task(self):
         tasks_key = "{}.task".format(self.HOSTNAME)
         # 获取tasks
-        while True:
+        while self.RUNNING_SIG:
             tasks = self.cache.lrange(tasks_key, 0, 10000)
             logging.info('start loading tasks from redis')
             if tasks:
@@ -145,7 +145,6 @@ class Consumer:
         print('shutdowning ...')
 
     async def release_locker(self, group_name, sleep_time):
-        import time
         await asyncio.sleep(int(sleep_time))
         self.locker_dict[group_name].append(1)
 
@@ -161,7 +160,7 @@ class Consumer:
                     self.locker_dict.get(group_name).pop()
                     url = task['url']
                     name = task['name']
-                    headers = task['headers']
+                    headers = json.loads(task['headers'])
                     body_data = task['data']
                     method = task['method'].upper()
                     # request
